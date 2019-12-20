@@ -22,6 +22,7 @@ class AutoUpdate
      * @var string
      */
     private $latestVersion = null;
+    private $latestVersionZipUrl = null;
     
     /**
      * Updates not yet installed.
@@ -203,8 +204,9 @@ class AutoUpdate
         $this->setTempDir(($tempDir !== null) ? $tempDir : __DIR__.DIRECTORY_SEPARATOR.'temp'.DIRECTORY_SEPARATOR);
         $this->setInstallDir(($installDir !== null) ? $installDir : __DIR__.DIRECTORY_SEPARATOR.'..'.DIRECTORY_SEPARATOR.'..'.DIRECTORY_SEPARATOR);
         
-        $this->latestVersion  = '0.0.0';
-        $this->currentVersion = '0.0.0';
+        $this->latestVersion       = '0.0.0';
+        $this->latestVersionZipUrl = '';
+        $this->currentVersion      = '0.0.0';
         
         // Init cache
         $this->cache = new Cache(new NotCache());
@@ -394,6 +396,11 @@ class AutoUpdate
         return $this->latestVersion;
     }
     
+    public function getLatestVersionZipUrl()
+    {
+        return $this->latestVersionZipUrl;
+    }
+    
     /**
      * Get an array of versions which will be installed.
      *
@@ -544,7 +551,8 @@ class AutoUpdate
         foreach ($versions as $version => $updateUrl) {
             if (Comparator::greaterThan($version, $this->currentVersion)) {
                 if (Comparator::greaterThan($version, $this->latestVersion)) {
-                    $this->latestVersion = $version;
+                    $this->latestVersion       = $version;
+                    $this->latestVersionZipUrl = $updateUrl;
                 }
                 
                 $this->updates[] = [
