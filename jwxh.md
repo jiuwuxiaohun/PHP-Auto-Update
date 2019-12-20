@@ -18,3 +18,8 @@ composer72 require jiuwuxiaohun/php-auto-update dev-master
 
 composer72 remove jiuwuxiaohun/php-auto-update
 
+
+20191218更新,先汉化
+
+20191220更新:
+    新增2个方法
