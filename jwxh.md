@@ -23,3 +23,9 @@ composer72 remove jiuwuxiaohun/php-auto-update
 
 20191220更新:
     新增2个方法
+    
+    
+    
+20200323更新:
+    取消使用zip扩展的解压缩,使用phpzip免扩展解压缩.
+    

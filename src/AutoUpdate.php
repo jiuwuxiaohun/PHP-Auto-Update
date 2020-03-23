@@ -466,7 +466,7 @@ class AutoUpdate
      */
     public function checkUpdate()
     {
-        $this->log->addNotice('Checking for a new update...');
+        $this->log->addNotice('检查新更新...');
         
         // Reset previous updates
         $this->latestVersion = '0.0.0';
@@ -482,14 +482,14 @@ class AutoUpdate
         
         // Check if cache is empty
         if ($versions === null || $versions === false) {
-            $this->log->addDebug(sprintf('Get new updates from %s', $updateFile));
+            $this->log->addDebug(sprintf('获取更新数据updates %s', $updateFile));
             
             // Read update file from update server
             if (function_exists('curl_version') && $this->_isValidUrl($updateFile)) {
                 $update = $this->_downloadCurl($updateFile);
                 
                 if ($update === false) {
-                    $this->log->addError(sprintf('Could not download update file "%s" via curl!', $updateFile));
+                    $this->log->addError(sprintf('无法通过curl下载  "%s"!', $updateFile));
                     
                     throw new DownloadException($updateFile);
                 }
@@ -498,12 +498,14 @@ class AutoUpdate
                 $update = @file_get_contents($updateFile, false, $this->_useBasicAuth());
                 
                 if ($update === false) {
-                    $this->log->addError(sprintf('Could not download update file "%s" via file_get_contents!',
+                    $this->log->addError(sprintf('无法通过file_get_contents下载  "%s"!',
                         $updateFile));
                     
                     throw new DownloadException($updateFile);
                 }
             }
+            
+            $this->log->addDebug('从http获取到更新配置$update: '.$update);
             
             // Parse update file
             $updateFileExtension = substr(strrchr($this->updateFile, '.'), 1);
@@ -511,7 +513,7 @@ class AutoUpdate
                 case 'ini':
                     $versions = parse_ini_string($update, true);
                     if ( ! is_array($versions)) {
-                        $this->log->addError('Unable to parse ini update file!');
+                        $this->log->addError('无法解析ini更新文件!');
                         
                         throw new ParserException;
                     }
@@ -524,25 +526,25 @@ class AutoUpdate
                 case 'json':
                     $versions = (array)json_decode($update);
                     if ( ! is_array($versions)) {
-                        $this->log->addError('Unable to parse json update file!');
+                        $this->log->addError('无法解析json更新文件!');
                         
                         throw new ParserException;
                     }
                     
                     break;
                 default:
-                    $this->log->addError(sprintf('Unknown file extension "%s"', $updateFileExtension));
+                    $this->log->addError(sprintf('未知的扩展文件后缀 "%s"', $updateFileExtension));
                     
                     throw new ParserException;
             }
             
             $this->cache->set('update-versions', $versions);
         } else {
-            $this->log->addDebug('Got updates from cache');
+            $this->log->addDebug('从缓存获取更新');
         }
         
         if ( ! is_array($versions)) {
-            $this->log->addError(sprintf('Could not read versions from server %s', $updateFile));
+            $this->log->addError(sprintf('无法从服务器读取版本 %s', $updateFile));
             
             return false;
         }
@@ -572,11 +574,11 @@ class AutoUpdate
         });
         
         if ($this->newVersionAvailable()) {
-            $this->log->addDebug(sprintf('New version "%s" available', $this->latestVersion));
+            $this->log->addDebug(sprintf('发现新版本 "%s"', $this->latestVersion));
             
             return true;
         } else {
-            $this->log->addDebug('No new version available');
+            $this->log->addDebug('没有新版本');
             
             return self::NO_UPDATE_AVAILABLE;
         }
@@ -628,7 +630,7 @@ class AutoUpdate
         if (curl_error($curl)) {
             $error = true;
             $this->log->addError(sprintf(
-                'Could not download update "%s" via curl: %s!',
+                '无法通过curl访问 "%s" ,curl异常: %s!',
                 $url,
                 curl_error($curl)
             ));
@@ -654,7 +656,7 @@ class AutoUpdate
      */
     protected function _downloadUpdate($updateUrl, $updateFile)
     {
-        $this->log->addInfo(sprintf('Downloading update "%s" to "%s"', $updateUrl, $updateFile));
+        $this->log->addInfo(sprintf('下载更新 "%s" -> "%s"', $updateUrl, $updateFile));
         if (function_exists('curl_version') && $this->_isValidUrl($updateUrl)) {
             $update = $this->_downloadCurl($updateUrl);
             if ($update === false) {
@@ -665,23 +667,23 @@ class AutoUpdate
             $update = @file_get_contents($updateUrl, false, $this->_useBasicAuth());
             
             if ($update === false) {
-                $this->log->addError(sprintf('Could not download update "%s"!', $updateUrl));
+                $this->log->addError(sprintf('不能下载更新 "%s"!', $updateUrl));
                 
                 throw new DownloadException($updateUrl);
             }
         } else {
-            throw new \Exception('No valid download method found!');
+            throw new \Exception('没有找到有效的下载方法!');
         }
         
         $handle = fopen($updateFile, 'w');
         if ( ! $handle) {
-            $this->log->addError(sprintf('Could not open file handle to save update to "%s"!', $updateFile));
+            $this->log->addError(sprintf('无法打开文件句柄以保存更新到 "%s"!', $updateFile));
             
             return false;
         }
         
         if ( ! fwrite($handle, $update)) {
-            $this->log->addError(sprintf('Could not write update to file "%s"!', $updateFile));
+            $this->log->addError(sprintf('无法将更新写入文件 "%s"!', $updateFile));
             fclose($handle);
             
             return false;
@@ -699,112 +701,112 @@ class AutoUpdate
      *
      * @return bool
      */
-    protected function _simulateInstall($updateFile)
-    {
-        $this->log->addNotice('[SIMULATE] Install new version');
-        clearstatcache();
-        
-        // Check if zip file could be opened
-        $zip = zip_open($updateFile);
-        if ( ! is_resource($zip)) {
-            $this->log->addError(sprintf('Could not open zip file "%s", error: %d', $updateFile, $zip));
-            
-            return false;
-        }
-        
-        $i               = -1;
-        $files           = [];
-        $simulateSuccess = true;
-        
-        while ($file = zip_read($zip)) {
-            $i++;
-            
-            $filename         = zip_entry_name($file);
-            $foldername       = $this->installDir.dirname($filename);
-            $absoluteFilename = $this->installDir.$filename;
-            
-            $files[$i] = [
-                'filename'          => $filename,
-                'foldername'        => $foldername,
-                'absolute_filename' => $absoluteFilename,
-            ];
-            
-            $this->log->addDebug(sprintf('[SIMULATE] Updating file "%s"', $filename));
-            
-            // Check if parent directory is writable
-            if ( ! is_dir($foldername)) {
-                mkdir($foldername);
-                $this->log->addDebug(sprintf('[SIMULATE] Create directory "%s"', $foldername));
-                $files[$i]['parent_folder_exists'] = false;
-                
-                $parent = dirname($foldername);
-                if ( ! is_writable($parent)) {
-                    $files[$i]['parent_folder_writable'] = false;
-                    
-                    $simulateSuccess = false;
-                    $this->log->addWarning(sprintf('[SIMULATE] Directory "%s" has to be writeable!', $parent));
-                } else {
-                    $files[$i]['parent_folder_writable'] = true;
-                }
-            }
-            
-            // Skip if entry is a directory
-            if (substr($filename, -1, 1) == DIRECTORY_SEPARATOR) {
-                continue;
-            }
-            
-            // Read file contents from archive
-            $contents = zip_entry_read($file, zip_entry_filesize($file));
-            if ($contents === false) {
-                $files[$i]['extractable'] = false;
-                
-                $simulateSuccess = false;
-                $this->log->addWarning(sprintf('[SIMULATE] Coud not read contents of file "%s" from zip file!',
-                    $filename));
-            }
-            
-            // Write to file
-            if (file_exists($absoluteFilename)) {
-                $files[$i]['file_exists'] = true;
-                if ( ! is_writable($absoluteFilename)) {
-                    $files[$i]['file_writable'] = false;
-                    
-                    $simulateSuccess = false;
-                    $this->log->addWarning(sprintf('[SIMULATE] Could not overwrite "%s"!', $absoluteFilename));
-                }
-            } else {
-                $files[$i]['file_exists'] = false;
-                
-                if (is_dir($foldername)) {
-                    if ( ! is_writable($foldername)) {
-                        $files[$i]['file_writable'] = false;
-                        
-                        $simulateSuccess = false;
-                        $this->log->addWarning(sprintf('[SIMULATE] The file "%s" could not be created!',
-                            $absoluteFilename));
-                    } else {
-                        $files[$i]['file_writable'] = true;
-                    }
-                } else {
-                    $files[$i]['file_writable'] = true;
-                    
-                    $this->log->addDebug(sprintf('[SIMULATE] The file "%s" could be created', $absoluteFilename));
-                }
-            }
-            
-            if ($filename == $this->updateScriptName) {
-                $this->log->addDebug(sprintf('[SIMULATE] Update script "%s" found', $absoluteFilename));
-                $files[$i]['update_script'] = true;
-            } else {
-                $files[$i]['update_script'] = false;
-            }
-        }
-        
-        $this->simulationResults = $files;
-        
-        return $simulateSuccess;
-    }
-    
+//    protected function _simulateInstall($updateFile)
+//    {
+//        $this->log->addNotice('[SIMULATE] Install new version');
+//        clearstatcache();
+//
+//        // Check if zip file could be opened
+//        $zip = zip_open($updateFile);
+//        if ( ! is_resource($zip)) {
+//            $this->log->addError(sprintf('无法打开zip文件  "%s", 错误: %d', $updateFile, $zip));
+//
+//            return false;
+//        }
+//
+//        $i               = -1;
+//        $files           = [];
+//        $simulateSuccess = true;
+//
+//        while ($file = zip_read($zip)) {
+//            $i++;
+//
+//            $filename         = zip_entry_name($file);
+//            $foldername       = $this->installDir.dirname($filename);
+//            $absoluteFilename = $this->installDir.$filename;
+//
+//            $files[$i] = [
+//                'filename'          => $filename,
+//                'foldername'        => $foldername,
+//                'absolute_filename' => $absoluteFilename,
+//            ];
+//
+//            $this->log->addDebug(sprintf('[SIMULATE] Updating file "%s"', $filename));
+//
+//            // Check if parent directory is writable
+//            if ( ! is_dir($foldername)) {
+//                mkdir($foldername);
+//                $this->log->addDebug(sprintf('[SIMULATE] Create directory "%s"', $foldername));
+//                $files[$i]['parent_folder_exists'] = false;
+//
+//                $parent = dirname($foldername);
+//                if ( ! is_writable($parent)) {
+//                    $files[$i]['parent_folder_writable'] = false;
+//
+//                    $simulateSuccess = false;
+//                    $this->log->addWarning(sprintf('[SIMULATE] Directory "%s" has to be writeable!', $parent));
+//                } else {
+//                    $files[$i]['parent_folder_writable'] = true;
+//                }
+//            }
+//
+//            // Skip if entry is a directory
+//            if (substr($filename, -1, 1) == DIRECTORY_SEPARATOR) {
+//                continue;
+//            }
+//
+//            // Read file contents from archive
+//            $contents = zip_entry_read($file, zip_entry_filesize($file));
+//            if ($contents === false) {
+//                $files[$i]['extractable'] = false;
+//
+//                $simulateSuccess = false;
+//                $this->log->addWarning(sprintf('[SIMULATE] Coud not read contents of file "%s" from zip file!',
+//                    $filename));
+//            }
+//
+//            // Write to file
+//            if (file_exists($absoluteFilename)) {
+//                $files[$i]['file_exists'] = true;
+//                if ( ! is_writable($absoluteFilename)) {
+//                    $files[$i]['file_writable'] = false;
+//
+//                    $simulateSuccess = false;
+//                    $this->log->addWarning(sprintf('[SIMULATE] 不能覆盖"%s"!', $absoluteFilename));
+//                }
+//            } else {
+//                $files[$i]['file_exists'] = false;
+//
+//                if (is_dir($foldername)) {
+//                    if ( ! is_writable($foldername)) {
+//                        $files[$i]['file_writable'] = false;
+//
+//                        $simulateSuccess = false;
+//                        $this->log->addWarning(sprintf('[SIMULATE] 这个文件 "%s" 不能被创建!',
+//                            $absoluteFilename));
+//                    } else {
+//                        $files[$i]['file_writable'] = true;
+//                    }
+//                } else {
+//                    $files[$i]['file_writable'] = true;
+//
+//                    $this->log->addDebug(sprintf('[SIMULATE] The file "%s" could be created', $absoluteFilename));
+//                }
+//            }
+//
+//            if ($filename == $this->updateScriptName) {
+//                $this->log->addDebug(sprintf('[SIMULATE] Update script "%s" found', $absoluteFilename));
+//                $files[$i]['update_script'] = true;
+//            } else {
+//                $files[$i]['update_script'] = false;
+//            }
+//        }
+//
+//        $this->simulationResults = $files;
+//
+//        return $simulateSuccess;
+//    }
+//
     /**
      * Install update.
      *
@@ -814,134 +816,314 @@ class AutoUpdate
      *
      * @return bool
      */
+    //因为部分机器没有zip扩展,所以已取消zip模式使用!
+//    protected function _install_bak_20200323($updateFile, $simulateInstall, $version)
+//    {
+//        $this->log->addNotice(sprintf('尝试安装更新 "%s"', $updateFile));
+//
+//        // Check if install should be simulated
+//        if ($simulateInstall) {
+//            if ($this->_simulateInstall($updateFile)) {
+//                $this->log->addNotice(sprintf('模拟更新 "%s" 操作成功', $version));
+//
+//                return true;
+//            }
+//
+//            $this->log->addCritical(sprintf('模拟更新 "%s" 操作失败!', $version));
+//
+//            return self::ERROR_SIMULATE;
+//        }
+//
+//        clearstatcache();
+//
+//        // Install only if simulateInstall === false
+//
+//        // Check if zip file could be opened
+//        $zip = zip_open($updateFile);
+//        if ( ! is_resource($zip)) {
+//            $this->log->addError(sprintf('无法打开zip文件  "%s", 错误: %d', $updateFile, $zip));
+//
+//            $size = filesize($updateFile);
+//            if ($size > 100 * 1024 * 1024) {
+//                return '文件太大，打开失败，请手动解压文件！！';
+//            }
+//
+//            return false;
+//        }
+//
+//        // Read every file from archive
+//        while ($file = zip_read($zip)) {
+//            $filename         = str_replace(array('/', '\\'), DIRECTORY_SEPARATOR, zip_entry_name($file));
+//            $foldername       = str_replace(array('/', '\\'), DIRECTORY_SEPARATOR,
+//                $this->installDir.dirname($filename));
+//            $absoluteFilename = str_replace(array('/', '\\'), DIRECTORY_SEPARATOR, $this->installDir.$filename);
+//            $this->log->addDebug(sprintf('Updating file "%s"', $filename));
+//
+//            if ( ! is_dir($foldername)) {
+//                if ( ! mkdir($foldername, $this->dirPermissions, true)) {
+//                    $this->log->addError(sprintf('Directory "%s" has to be writeable!', $foldername));
+//
+//                    return false;
+//                }
+//            }
+//
+//            // Skip if entry is a directory
+//            if (substr($filename, -1, 1) == DIRECTORY_SEPARATOR) {
+//                continue;
+//            }
+//
+//            // Read file contents from archive
+//            $contents = zip_entry_read($file, zip_entry_filesize($file));
+//
+//            if ($contents === false) {
+//                $this->log->addError(sprintf('不能读取zip条目"%s"', $file));
+//                continue;
+//            }
+//
+//            // Write to file
+//            if (file_exists($absoluteFilename)) {
+//                if ( ! is_writable($absoluteFilename)) {
+//                    $this->log->addError(sprintf('不能覆盖"%s"!', $absoluteFilename));
+//
+//                    zip_close($zip);
+//
+//                    return false;
+//                }
+//            } else {
+//                // touch will fail if PHP is not the owner of the file, and file_put_contents is faster than touch.
+//                if (file_put_contents($absoluteFilename, '') === false) {
+//                    $this->log->addError(sprintf('这个文件 "%s" 不能被创建!', $absoluteFilename));
+//                    zip_close($zip);
+//
+//                    return false;
+//                }
+//
+//                $this->log->addDebug(sprintf('文件 "%s" 已创建', $absoluteFilename));
+//            }
+//
+//            $updateHandle = fopen($absoluteFilename, 'w');
+//
+//            if ( ! $updateHandle) {
+//                $this->log->addError(sprintf('不能打开文件 "%s"!', $absoluteFilename));
+//                zip_close($zip);
+//
+//                return false;
+//            }
+//
+//
+//            if (false === fwrite($updateHandle, $contents)) {
+//                $this->log->addError(sprintf('不能写入文件"%s"!', $absoluteFilename));
+//                zip_close($zip);
+//
+//                return false;
+//            }
+//
+//            fclose($updateHandle);
+//
+//            //If file is a update script, include
+//            if ($filename == $this->updateScriptName) {
+//                $this->log->addDebug(sprintf('尝试嵌入更新脚本 "%s"', $absoluteFilename));
+//                require($absoluteFilename);
+//
+//                $this->log->addInfo(sprintf('更新脚本 "%s" 嵌入成功!', $absoluteFilename));
+//                if ( ! unlink($absoluteFilename)) {
+//                    $this->log->addWarning(sprintf('不能删除更新脚本 "%s"!', $absoluteFilename));
+//                }
+//            }
+//        }
+//
+//        zip_close($zip);
+//
+//        $this->log->addNotice(sprintf('更新安装 "%s" 成功', $version));
+//
+//        return true;
+//    }
+//
+    /**
+     * Install update.
+     *
+     * @param string $updateFile      更新文件包zip
+     * @param bool   $simulateInstall 真实安装=false  模拟安装=true
+     * @param        $version
+     *
+     * @return bool
+     */
     protected function _install($updateFile, $simulateInstall, $version)
     {
-        $this->log->addNotice(sprintf('Trying to install update "%s"', $updateFile));
+        $this->log->addNotice(sprintf('尝试安装更新 "%s"', $updateFile));
         
         // Check if install should be simulated
         if ($simulateInstall) {
-            if ($this->_simulateInstall($updateFile)) {
-                $this->log->addNotice(sprintf('Simulation of update "%s" process succeeded', $version));
-                
-                return true;
-            }
+            $this->log->addNotice(sprintf('本次为模拟更新!已取消模拟更新! "%s"', $updateFile));
             
-            $this->log->addCritical(sprintf('Simulation of update  "%s" process failed!', $version));
-            
-            return self::ERROR_SIMULATE;
+            return true;
         }
         
         clearstatcache();
         
-        // Install only if simulateInstall === false
-        
-        // Check if zip file could be opened
-        $zip = zip_open($updateFile);
-        if ( ! is_resource($zip)) {
-            $this->log->addError(sprintf('Could not open zip file "%s", error: %d', $updateFile, $zip));
+        try {
+            $zipFile = new \PhpZip\ZipFile();
+            $zipFile->openFile($updateFile);
+            $zipFile->extractTo($this->installDir);
+            $zipFile->close();
             
-            $size = filesize($updateFile);
-            if ($size > 100 * 1024 * 1024) {
-                return '文件太大，打开失败，请手动解压文件！！';
+            $update_script_path = $this->installDir.$this->updateScriptName;
+            if (is_file($update_script_path)) {
+                $this->log->addDebug(sprintf('尝试嵌入更新脚本 "%s"', $update_script_path));
+                require($update_script_path);
+                
+                $this->log->addInfo(sprintf('更新脚本 "%s" 嵌入成功!', $update_script_path));
+                if ( ! unlink($update_script_path)) {
+                    $this->log->addWarning(sprintf('不能删除更新脚本 "%s"!', $update_script_path));
+                }
             }
+            
+            return true;
+        } catch (\PhpZip\Exception\ZipException $e) {
+            $message = $e->getMessage();
+            $this->log->addDebug(sprintf('PhpZip解压缩异常 "%s"', $message));
             
             return false;
         }
-        
-        // Read every file from archive
-        while ($file = zip_read($zip)) {
-            $filename         = str_replace(array('/', '\\'), DIRECTORY_SEPARATOR, zip_entry_name($file));
-            $foldername       = str_replace(array('/', '\\'), DIRECTORY_SEPARATOR,
-                $this->installDir.dirname($filename));
-            $absoluteFilename = str_replace(array('/', '\\'), DIRECTORY_SEPARATOR, $this->installDir.$filename);
-            $this->log->addDebug(sprintf('Updating file "%s"', $filename));
-            
-            if ( ! is_dir($foldername)) {
-                if ( ! mkdir($foldername, $this->dirPermissions, true)) {
-                    $this->log->addError(sprintf('Directory "%s" has to be writeable!', $foldername));
-                    
-                    return false;
-                }
-            }
-            
-            // Skip if entry is a directory
-            if (substr($filename, -1, 1) == DIRECTORY_SEPARATOR) {
-                continue;
-            }
-            
-            // Read file contents from archive
-            $contents = zip_entry_read($file, zip_entry_filesize($file));
-            
-            if ($contents === false) {
-                $this->log->addError(sprintf('Coud not read zip entry "%s"', $file));
-                continue;
-            }
-            
-            // Write to file
-            if (file_exists($absoluteFilename)) {
-                if ( ! is_writable($absoluteFilename)) {
-                    $this->log->addError(sprintf('Could not overwrite "%s"!', $absoluteFilename));
-                    
-                    zip_close($zip);
-                    
-                    return false;
-                }
-            } else {
-                // touch will fail if PHP is not the owner of the file, and file_put_contents is faster than touch.
-                if (file_put_contents($absoluteFilename, '') === false) {
-                    $this->log->addError(sprintf('The file "%s" could not be created!', $absoluteFilename));
-                    zip_close($zip);
-                    
-                    return false;
-                }
-                
-                $this->log->addDebug(sprintf('File "%s" created', $absoluteFilename));
-            }
-            
-            $updateHandle = fopen($absoluteFilename, 'w');
-            
-            if ( ! $updateHandle) {
-                $this->log->addError(sprintf('Could not open file "%s"!', $absoluteFilename));
-                zip_close($zip);
-                
-                return false;
-            }
-            
-            
-            if (false === fwrite($updateHandle, $contents)) {
-                $this->log->addError(sprintf('Could not write to file "%s"!', $absoluteFilename));
-                zip_close($zip);
-                
-                return false;
-            }
-            
-            fclose($updateHandle);
-            
-            //If file is a update script, include
-            if ($filename == $this->updateScriptName) {
-                $this->log->addDebug(sprintf('Try to include update script "%s"', $absoluteFilename));
-                require($absoluteFilename);
-                
-                $this->log->addInfo(sprintf('Update script "%s" included!', $absoluteFilename));
-                if ( ! unlink($absoluteFilename)) {
-                    $this->log->addWarning(sprintf('Could not delete update script "%s"!', $absoluteFilename));
-                }
-            }
-        }
-        
-        zip_close($zip);
-        
-        $this->log->addNotice(sprintf('Update "%s" successfully installed', $version));
-        
-        return true;
+
+
+//
+//        $zipFile = new \PhpZip\ZipFile();
+//        try {
+//            $zipFile->openFile($updateFile);
+//            $zip_item_count = $zipFile->count();
+//            $listFiles      = $zipFile->getListFiles();
+//            dump($listFiles);
+//            foreach ($listFiles as $file) {
+//                $hasEntry    = $zipFile->hasEntry($entryName);
+//                $contents    = $zipFile->getEntryContents($entryName);
+//                $isDirectory = $zipFile->isDirectory($file);
+//                $zipFile->extractTo($toDirectory, $extractOnlyFiles);
+//
+//                dump($file);
+//                $filename         = str_replace(array('/', '\\'), DIRECTORY_SEPARATOR, array_pop(explode('/', $file)));
+//                $foldername       = str_replace(array('/', '\\'), DIRECTORY_SEPARATOR, $this->installDir.dirname($filename));
+//                $absoluteFilename = str_replace(array('/', '\\'), DIRECTORY_SEPARATOR, $this->installDir.$filename);
+//
+//                dump($filename, $foldername, $absoluteFilename);
+//
+//            }
+//
+//
+//        } catch (\PhpZip\Exception\ZipException $e) {
+//            $message           = $e->getMessage();
+//            $backup_zip_result = false;
+//        } finally {
+//            $zipFile->close();
+//        }
+
+//        // Check if zip file could be opened
+//        $zip = zip_open($updateFile);
+//        if ( ! is_resource($zip)) {
+//            $this->log->addError(sprintf('无法打开zip文件  "%s", 错误: %d', $updateFile, $zip));
+//
+//            $size = filesize($updateFile);
+//            if ($size > 100 * 1024 * 1024) {
+//                return '文件太大，打开失败，请手动解压文件！！';
+//            }
+//
+//            return false;
+//        }
+//
+//        // Read every file from archive
+//        while ($file = zip_read($zip)) {
+//            $filename         = str_replace(array('/', '\\'), DIRECTORY_SEPARATOR, zip_entry_name($file));
+//            $foldername       = str_replace(array('/', '\\'), DIRECTORY_SEPARATOR,
+//                $this->installDir.dirname($filename));
+//            $absoluteFilename = str_replace(array('/', '\\'), DIRECTORY_SEPARATOR, $this->installDir.$filename);
+//            $this->log->addDebug(sprintf('更新文件 "%s"', $filename));
+//
+//            if ( ! is_dir($foldername)) {
+//                if ( ! mkdir($foldername, $this->dirPermissions, true)) {
+//                    $this->log->addError(sprintf('目录 "%s" 不可写!', $foldername));
+//
+//                    return false;
+//                }
+//            }
+//
+//            // Skip if entry is a directory
+//            if (substr($filename, -1, 1) == DIRECTORY_SEPARATOR) {
+//                continue;
+//            }
+//
+//            // Read file contents from archive
+//            $contents = zip_entry_read($file, zip_entry_filesize($file));
+//
+//            if ($contents === false) {
+//                $this->log->addError(sprintf('不能读取zip条目"%s"', $file));
+//                continue;
+//            }
+//
+//            // Write to file
+//            if (file_exists($absoluteFilename)) {
+//                if ( ! is_writable($absoluteFilename)) {
+//                    $this->log->addError(sprintf('不能覆盖"%s"!', $absoluteFilename));
+//
+//                    zip_close($zip);
+//
+//                    return false;
+//                }
+//            } else {
+//                // touch will fail if PHP is not the owner of the file, and file_put_contents is faster than touch.
+//                if (file_put_contents($absoluteFilename, '') === false) {
+//                    $this->log->addError(sprintf('这个文件 "%s" 不能被创建!', $absoluteFilename));
+//                    zip_close($zip);
+//
+//                    return false;
+//                }
+//
+//                $this->log->addDebug(sprintf('文件 "%s" 已创建', $absoluteFilename));
+//            }
+//
+//            $updateHandle = fopen($absoluteFilename, 'w');
+//
+//            if ( ! $updateHandle) {
+//                $this->log->addError(sprintf('不能打开文件 "%s"!', $absoluteFilename));
+//                zip_close($zip);
+//
+//                return false;
+//            }
+//
+//
+//            if (false === fwrite($updateHandle, $contents)) {
+//                $this->log->addError(sprintf('不能写入文件"%s"!', $absoluteFilename));
+//                zip_close($zip);
+//
+//                return false;
+//            }
+//
+//            fclose($updateHandle);
+//
+//            //If file is a update script, include
+//            if ($filename == $this->updateScriptName) {
+//                $this->log->addDebug(sprintf('尝试嵌入更新脚本 "%s"', $absoluteFilename));
+//                require($absoluteFilename);
+//
+//                $this->log->addInfo(sprintf('Update script "%s" included!', $absoluteFilename));
+//                if ( ! unlink($absoluteFilename)) {
+//                    $this->log->addWarning(sprintf('不能删除更新脚本 "%s"!', $absoluteFilename));
+//                }
+//            }
+//        }
+//
+//        zip_close($zip);
+//
+//        $this->log->addNotice(sprintf('Update "%s" successfully installed', $version));
+//
+//        return true;
     }
     
     
     /**
      * Update to the latest version
      *
-     * @param bool $simulateInstall Check for directory and file permissions before copying files (Default: true)
-     * @param bool $deleteDownload  Delete download after update (Default: true)
+     * @param bool $simulateInstall 模拟安装,检测目录权限等等
+     * @param bool $deleteDownload  更新成功后,删除下载的文件
      *
      * @return integer|bool
      * @throws DownloadException
@@ -949,7 +1131,7 @@ class AutoUpdate
      */
     public function update($simulateInstall = true, $deleteDownload = true)
     {
-        $this->log->addInfo('Trying to perform update');
+        $this->log->addInfo('尝试执行更新');
         
         // Check for latest version
         if ($this->latestVersion === null || count($this->updates) === 0) {
@@ -957,14 +1139,14 @@ class AutoUpdate
         }
         
         if ($this->latestVersion === null || count($this->updates) === 0) {
-            $this->log->addError('Could not get latest version from server!');
+            $this->log->addError('无法从服务器获得最新版本!');
             
             return self::ERROR_VERSION_CHECK;
         }
         
         // Check if current version is up to date
         if ( ! $this->newVersionAvailable()) {
-            $this->log->addWarning('No update available!');
+            $this->log->addWarning('没有可用的更新!');
             
             return self::NO_UPDATE_AVAILABLE;
         }
@@ -974,11 +1156,11 @@ class AutoUpdate
         $result = $this->check_memory();
         
         foreach ($this->updates as $update) {
-            $this->log->addDebug(sprintf('Update to version "%s"', $update['version']));
+            $this->log->addDebug(sprintf('更新到版本 "%s"', $update['version']));
             
             // Check for temp directory
             if (empty($this->tempDir) || ! is_dir($this->tempDir) || ! is_writable($this->tempDir)) {
-                $this->log->addCritical(sprintf('Temporary directory "%s" does not exist or is not writeable!',
+                $this->log->addCritical(sprintf('临时目录 "%s" 不存在或者不可写!',
                     $this->tempDir));
                 
                 return self::ERROR_TEMP_DIR;
@@ -986,7 +1168,7 @@ class AutoUpdate
             
             // Check for install directory
             if (empty($this->installDir) || ! is_dir($this->installDir) || ! is_writable($this->installDir)) {
-                $this->log->addCritical(sprintf('Install directory "%s" does not exist or is not writeable!',
+                $this->log->addCritical(sprintf('安装目录 "%s" 不存在或者不可写!',
                     $this->installDir));
                 
                 return self::ERROR_INSTALL_DIR;
@@ -994,7 +1176,7 @@ class AutoUpdate
             
             $updateFile = $this->tempDir.$update['version'].'.zip';
             
-            // Download update
+            // 下载更新包
             if ( ! is_file($updateFile)) {
                 
                 ## 判断文件大小
@@ -1011,28 +1193,28 @@ class AutoUpdate
                 }
                 
                 if ( ! $this->_downloadUpdate($update['url'], $updateFile)) {
-                    $this->log->addCritical(sprintf('Failed to download update from "%s" to "%s"!', $update['url'],
+                    $this->log->addCritical(sprintf('下载更新失败 "%s" -> "%s"!', $update['url'],
                         $updateFile));
                     
                     return self::ERROR_DOWNLOAD_UPDATE;
                 }
                 
-                $this->log->addDebug(sprintf('Latest update downloaded to "%s"', $updateFile));
+                $this->log->addDebug(sprintf('更新包下载成功 "%s"', $updateFile));
             } else {
-                $this->log->addInfo(sprintf('Latest update already downloaded to "%s"', $updateFile));
+                $this->log->addInfo(sprintf('更新包之前就已存在 "%s"', $updateFile));
             }
             
-            // Install update
+            // 安装更新
             $result = $this->_install($updateFile, $simulateInstall, $update['version']);
             if ($result === true) {
                 $this->runOnEachUpdateFinishCallbacks($update['version']);
                 if ($deleteDownload) {
-                    $this->log->addDebug(sprintf('Trying to delete update file "%s" after successfull update',
+                    $this->log->addDebug(sprintf('更新成功了,试图删除更新文件包 "%s"',
                         $updateFile));
                     if (unlink($updateFile)) {
-                        $this->log->addInfo(sprintf('Update file "%s" deleted after successfull update', $updateFile));
+                        $this->log->addInfo(sprintf('更新文件包 "%s" 删除成功', $updateFile));
                     } else {
-                        $this->log->addError(sprintf('Could not delete update file "%s" after successfull update!',
+                        $this->log->addError(sprintf('未能删除更新文件包 "%s" !',
                             $updateFile));
                         
                         return self::ERROR_DELETE_TEMP_UPDATE;
@@ -1040,11 +1222,11 @@ class AutoUpdate
                 }
             } else {
                 if ($deleteDownload) {
-                    $this->log->addDebug(sprintf('Trying to delete update file "%s" after failed update', $updateFile));
+                    $this->log->addDebug(sprintf('更新失败了, 试图删除更新文件 "%s"', $updateFile));
                     if (unlink($updateFile)) {
-                        $this->log->addInfo(sprintf('Update file "%s" deleted after failed update', $updateFile));
+                        $this->log->addInfo(sprintf('更新文件包 "%s" 删除成功', $updateFile));
                     } else {
-                        $this->log->addError(sprintf('Could not delete update file "%s" after failed update!',
+                        $this->log->addError(sprintf('未能删除更新文件包 "%s" !',
                             $updateFile));
                     }
                 }
@@ -1070,7 +1252,7 @@ class AutoUpdate
      */
     public function downVersion($max_mb = 100)
     {
-        $this->log->addInfo('Trying to perform update');
+        $this->log->addInfo('尝试执行更新');
         
         // Check for latest version
         if ($this->latestVersion === null || count($this->updates) === 0) {
@@ -1078,14 +1260,14 @@ class AutoUpdate
         }
         
         if ($this->latestVersion === null || count($this->updates) === 0) {
-            $this->log->addError('Could not get latest version from server!');
+            $this->log->addError('无法从服务器获取最新版本!');
             
             return self::ERROR_VERSION_CHECK;
         }
         
         // Check if current version is up to date
         if ( ! $this->newVersionAvailable()) {
-            $this->log->addWarning('No update available!');
+            $this->log->addWarning('没可用更新!');
             
             return self::NO_UPDATE_AVAILABLE;
         }
@@ -1096,11 +1278,11 @@ class AutoUpdate
         
         ## 循环下载文件
         foreach ($this->updates as $update) {
-            $this->log->addDebug(sprintf('Update to version "%s"', $update['version']));
+            $this->log->addDebug(sprintf('更新到版本 "%s"', $update['version']));
             
             // Check for temp directory
             if (empty($this->tempDir) || ! is_dir($this->tempDir) || ! is_writable($this->tempDir)) {
-                $this->log->addCritical(sprintf('Temporary directory "%s" does not exist or is not writeable!',
+                $this->log->addCritical(sprintf('临时目录 "%s" 不存在或者不可写!',
                     $this->tempDir));
                 
                 return self::ERROR_TEMP_DIR;
@@ -1108,7 +1290,7 @@ class AutoUpdate
             
             // Check for install directory
             if (empty($this->installDir) || ! is_dir($this->installDir) || ! is_writable($this->installDir)) {
-                $this->log->addCritical(sprintf('Install directory "%s" does not exist or is not writeable!',
+                $this->log->addCritical(sprintf('安装目录 "%s" 不存在或者不可写!',
                     $this->installDir));
                 
                 return self::ERROR_INSTALL_DIR;
@@ -1133,15 +1315,15 @@ class AutoUpdate
                 }
                 
                 if ( ! $this->_downloadUpdate($update['url'], $updateFile)) {
-                    $this->log->addCritical(sprintf('Failed to download update from "%s" to "%s"!', $update['url'],
+                    $this->log->addCritical(sprintf('下载更新失败 "%s" to "%s"!', $update['url'],
                         $updateFile));
                     
                     return self::ERROR_DOWNLOAD_UPDATE;
                 }
                 
-                $this->log->addDebug(sprintf('Latest update downloaded to "%s"', $updateFile));
+                $this->log->addDebug(sprintf('最新更新已下载至 "%s"', $updateFile));
             } else {
-                $this->log->addInfo(sprintf('Latest update already downloaded to "%s"', $updateFile));
+                $this->log->addInfo(sprintf('最新的更新已经下载到 "%s"', $updateFile));
             }
             
         }
