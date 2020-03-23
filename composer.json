@@ -16,7 +16,6 @@
   "require": {
     "ext-json": "*",
     "ext-curl": "*",
-    "ext-zip": "*",
     "nelexa/zip": "^3.1",
     "desarrolla2/cache": "2.1.*",
     "monolog/monolog": "1.23.*",
